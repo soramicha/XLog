@@ -2,6 +2,8 @@
 
 #### My project XLog (short for Expense Logger), is a functional expense tracker, where users can record the date, money, category, location, and memo for the day of their expense. Users can then keep track of those expenses with convenient bar charts and data tables.
 
+### Video Link: https://youtu.be/m6YWHuTUWfU
+
 ### Functionalities
 
 #### There are four main pages in XLog. The first one is the Record page. Users are required to input the date and amount of money for the day of their expense, as well as the category their expense would go in. There are a total of nine options users can pick for their category: Utility, Food, Gas, Mortgage/Rent, Transportation, Subscriptions, Healthcare, Personal Expenses, and Other. The last two inputs are optional, which are the Location and Memo fields. The location field is here to help the user know where they had spent that money, such as a supermarket or at a gas station. The memo field is a description field, where the user can add more information such as "Bought banana, strawberries, and kiwis" or "Purchased 5 gallons of gas". The convenient functionality in this page is that there is an "Add New Section" button, which the user can input more than one record of the same day, so they don't need to repeatedly enter the same date if they did multiple shoppings in one day. Once the user submits the records with the "Create" button, the records will be saved.
