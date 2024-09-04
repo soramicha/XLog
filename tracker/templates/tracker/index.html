@@ -1,0 +1,401 @@
+{% extends "tracker/layout.html" %} {% load static %} {% block body %}
+<!-- this page is only viewable for people who have logged in -->
+<!-- this page will show the SUMMARY of budgeting -->
+<br>
+<h1 style="display: flex; justify-content: center; align-items: center; font-family: 'Courier New', Courier, monospace">
+  Welcome, {{username}}!
+</h1>
+<br/>
+<form id="summary_form"></form>
+
+<!-- insert a bar chart for any year -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<body>
+  {% csrf_token %}
+  <div id="canvas-div">
+    <canvas
+      id="stats"
+      style="
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 1000px;
+        padding-right: 10px;
+        padding-left: 5px
+      "
+    ></canvas>
+  </div>
+  <script>
+    // create a form
+    var select = document.createElement("select")
+    select.setAttribute("style", "background-color: transparent")
+    const current_year = new Date().getFullYear()
+
+    // year to change to
+    var change_to_this_year
+    if ({{low}} != -1 && {{top}} != -1) {
+        change_to_this_year = {{top}}
+
+        for (let year = {{low}}; year <= {{top}}; year ++) {
+            var option = document.createElement("option")
+            option.value = year
+            option.innerHTML = year
+            select.append(option)
+    
+            if (year === {{top}}) {
+                option.selected = true
+                console.log("selected" + year)
+            }
+        }
+    }
+    else {
+        change_to_this_year = current_year
+
+        var option = document.createElement("option")
+        option.value = current_year
+        option.innerHTML = current_year
+        select.append(option)
+        option.selected = true
+    }
+
+    form = document.getElementById("summary_form")
+    form.append(select)
+    form.setAttribute("style", "font-family: 'Courier New', Courier, monospace; display: flex; justify-content: center; align-items: center; padding-bottom: 10px")
+
+    // update canvas everytime a new option is selected
+    form.onchange = function(event) {
+        event.preventDefault()
+        console.log("change to " + select.value)
+        change_to_this_year = select.value
+        bar_graph(select.value)
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        bar_graph(change_to_this_year) // load chart in the page
+    })
+
+    function update_chart() {
+        console.log(change_to_this_year)
+        bar_graph(change_to_this_year)
+    }
+
+    let bar_chart
+    function bar_graph(change_to_this_year) {
+        console.log("bar chart: " + bar_chart)
+        // create data arrays for every category
+        let utility_data = new Array()
+        let food_data = new Array()
+        let gas_data = new Array()
+        let rent_data = new Array()
+        let transportation_data = new Array()
+        let subscription_data = new Array()
+        let health_data = new Array()
+        let personal_expense_data = new Array()
+        let other_data = new Array()
+
+        fetch("", {
+            method: "PUT",
+            body: JSON.stringify({
+            year: change_to_this_year, // change it later
+            }),
+            headers: {
+            "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
+                .value,
+            },
+            mode: "same-origin",
+        })
+        .then((response) => response.json())
+        .then((records) => {
+            // calculate all category expenses per month
+            for (let month = 1; month <= 12; month++) {
+                let utility = 0
+                let food = 0
+                let gas = 0
+                let rent = 0
+                let transportation = 0
+                let subscription = 0
+                let health = 0
+                let p_expense = 0
+                let other = 0
+
+                // sum up every category for every month
+                for (let i = 0; i < records.records.length; i++) {
+                    const d = parseInt(records.records[i].date.split('-')[1])
+                    if (d === month) {
+                        if (records.records[i].category === "Utility") {
+                            utility += parseFloat(records.records[i].expense)
+                        }
+                        else if (records.records[i].category === "Food") {
+                            food += parseFloat(records.records[i].expense)
+                        }
+                        else if (records.records[i].category === "Gas") {
+                            gas += parseFloat(records.records[i].expense)
+                        }
+                        else if (records.records[i].category === "Mortgage/Rent") {
+                            rent += parseFloat(records.records[i].expense)
+                        }
+                        else if (records.records[i].category === "Transportation") {
+                            transportation += parseFloat(records.records[i].expense)
+                        }
+                        else if (records.records[i].category === "Subscriptions") {
+                            subscription += parseFloat(records.records[i].expense)
+                        }
+                        else if (records.records[i].category === "Healthcare") {
+                            health += parseFloat(records.records[i].expense)
+                        }
+                        else if (records.records[i].category === "Personal Expenses") {
+                            p_expense += parseFloat(records.records[i].expense)
+                        }
+                        else if (records.records[i].category === "Other") {
+                            other += parseFloat(records.records[i].expense)
+                        }
+                    }
+                }
+
+                // push to arrays
+                utility_data.push(utility)
+                food_data.push(food)
+                gas_data.push(gas)
+                rent_data.push(rent)
+                transportation_data.push(transportation)
+                subscription_data.push(subscription)
+                health_data.push(health)
+                personal_expense_data.push(p_expense)
+                other_data.push(other)
+            }
+
+            // data for the bar chart
+            const the_data = {
+            labels: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+            datasets: [
+                {
+                    label: 'Utility',
+                    data: utility_data,
+                    backgroundColor: 'rgba(255, 99, 132, 0.3)',
+                    borderColor: 'rgba(255, 99, 132)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Food',
+                    data: food_data,
+                    backgroundColor: 'rgba(255, 159, 64, 0.3)',
+                    borderColor: 'rgba(255, 159, 64)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Gas',
+                    data: gas_data,
+                    backgroundColor: 'rgba(255, 205, 86, 0.3)',
+                    borderColor: 'rgba(255, 205, 86)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Mortgage/Rent',
+                    data: rent_data,
+                    backgroundColor: 'rgba(75, 192, 192, 0.3)',
+                    borderColor: 'rgba(75, 192, 192)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Transportation',
+                    data: transportation_data,
+                    backgroundColor: 'rgba(54, 162, 235, 0.3)',
+                    borderColor: 'rgba(54, 162, 235)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Subscriptions',
+                    data: subscription_data,
+                    backgroundColor: 'rgba(153, 102, 255, 0.3)',
+                    borderColor: 'rgba(153, 102, 255)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Healthcare',
+                    data: health_data,
+                    backgroundColor: 'rgba(46, 204, 113, 0.3)',
+                    borderColor: 'rgba(46, 204, 113)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Personal Expenses',
+                    data: personal_expense_data,
+                    backgroundColor: 'rgba(219, 10, 91, 0.3)',
+                    borderColor: 'rgba(219, 10, 91)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Other',
+                    data: other_data,
+                    backgroundColor: 'rgba(102, 51, 153, 0.3)',
+                    borderColor: 'rgba(102, 51, 153)',
+                    borderWidth: 1
+                },
+            ]
+        }
+
+        const light_mode = {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    stacked: true,
+                    ticks: {
+                        color: '#000',
+                        font: {
+                            family: 'Courier New'
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    }
+                },
+                y: {
+                    stacked: true,
+                    ticks: {
+                        color: '#000',
+                        font: {
+                            family: 'Courier New'
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    },
+                    title: {
+                        display: true,
+                        text: "Expenses",
+                        color: '#000',
+                        font: {
+                            family: 'Courier New',
+                            size: 14
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    // show legend
+                    display: true,
+                    position: 'bottom',
+                    title: {
+                        display: true,
+                        text: "Click to Show/Hide Legend",
+                        padding: 30,
+                        color: "#000",
+                        font: {
+                            weight: "bold",
+                            family: 'Courier New',
+                            size: 14
+                        }
+                    },
+                    labels: {
+                        color: '#000',
+                        font: {
+                            family: 'Courier New'
+                        }
+                    }
+                },
+                title: {
+                    // show title of the chart
+                    display: true,
+                    text: "Expenses for " + change_to_this_year, // Specify the year in the title
+                    color: "#000",
+                    font: {
+                        family: 'Courier New',
+                        size: 20
+                    }
+                }
+            }
+        }
+
+        const dark_mode = {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    stacked: true,
+                    ticks: {
+                        color: '#fff',
+                        font: {
+                            family: 'Courier New'
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(225, 225, 225, 0.3)'
+                    }
+                },
+                y: {
+                    stacked: true,
+                    ticks: {
+                        color: '#fff',
+                        font: {
+                            family: 'Courier New'
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(225, 225, 225, 0.3)'
+                    },
+                    title: {
+                        display: true,
+                        text: "Expenses",
+                        color: '#fff',
+                        font: {
+                            family: 'Courier New',
+                            size: 14
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    // show legend
+                    display: true,
+                    position: 'bottom',
+                    title: {
+                        display: true,
+                        color: '#fff',
+                        text: "Click to Show/Hide Legend",
+                        padding: 30,
+                        font: {
+                            weight: "bold",
+                            family: 'Courier New',
+                            size: 14
+                        }
+                    },
+                    labels: {
+                        color: '#fff',
+                        font: {
+                            family: 'Courier New'
+                        }
+                    },
+                },
+                title: {
+                    // show title of the chart
+                    display: true,
+                    text: "Expenses for " + change_to_this_year, // Specify the year in the title
+                    color: '#fff',
+                    font: {
+                        family: 'Courier New',
+                        size: 20
+                    }
+                }
+            }
+        }
+
+        // if there's an existing bar_chart, delete it
+        if (bar_chart) {
+            bar_chart.destroy()
+        }
+
+        // create a bar graph on a fresh empty canvas
+        bar_chart = new Chart(document.getElementById('stats').getContext('2d'), {
+            type: "bar",
+            data: the_data,
+            options: change_mode(1) ? light_mode : dark_mode
+        })
+    })
+    }
+  </script>
+  <script src="{% static 'tracker/mode.js' %}"></script>
+</body>
+{% endblock %}

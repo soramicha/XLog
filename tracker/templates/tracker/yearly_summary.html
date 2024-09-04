@@ -1,0 +1,440 @@
+{% extends "tracker/layout.html" %} {% load static %} {% block body %}
+    <!-- this page is only viewable for people who have logged in -->
+    <!-- this page will show the YEARLY SUMMARY of budgeting -->
+    <br>
+    <h1 id="yearly_summary_heading" style="display: flex; justify-content: center; align-items: center; font-family: 'Courier New', Courier, monospace">Yearly Summary</h1>
+    
+    <form id="summary_form"></form>
+    <br>
+
+    <div id="all">
+        <style>
+            table, th, td {
+                border: 1px solid black;
+            }
+        </style>
+        {% csrf_token %}
+        <!-- grand summary total -->
+        <div id="summary"></div>
+        <div id="all-yearly-records"></div>
+    </div>
+
+    <!-- code -->
+    <script>
+        // create a form
+        var select = document.createElement("select")
+        select.setAttribute("style", "background-color: transparent; font-family: 'Courier New', Courier, monospace")
+        const current_year = new Date().getFullYear()
+        // year to change to
+        var change_to_this_year
+        if ({{low}} != -1 && {{top}} != -1) {
+            change_to_this_year = {{top}}
+
+            for (let year = {{low}}; year <= {{top}}; year ++) {
+                var option = document.createElement("option")
+                option.value = year
+                option.innerHTML = year
+                select.append(option)
+        
+                if (year === {{top}}) {
+                    option.selected = true
+                    console.log("selected" + year)
+                }
+            }
+        }
+        else {
+            change_to_this_year = current_year
+
+            var option = document.createElement("option")
+            option.value = current_year
+            option.innerHTML = current_year
+            select.append(option)
+            option.selected = true
+        }
+
+        form = document.getElementById("summary_form")
+        form.append(select)
+        form.setAttribute("style", "display: flex; justify-content: center; align-items: center")
+
+        // default load page
+        load_records(select.value)
+
+        // update table every time a new selected year option is chosen
+        form.onchange = function(event) {
+            event.preventDefault()
+            // get year and load it
+            load_records(select.value)
+        }
+
+        function load_records(year) {
+            // call summary view function to load records
+            fetch("", {
+                method: "PUT",
+                body: JSON.stringify({
+                    year: year
+                }),
+                headers: {"X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value},
+                mode: "same-origin",
+            })
+            .then((response) => response.json())
+            .then(records => {
+                // delete everything inside all-yearly-records div
+                document.querySelectorAll("#all-yearly-records").forEach((e) => {
+                    e.remove()
+                })
+
+                // delete everything inside summary div
+                document.querySelectorAll("#summary").forEach((e) => {
+                    e.remove()
+                })
+
+                // re-create summary
+                var summary = document.createElement("div")
+                summary.setAttribute("id", "summary")
+                summary.setAttribute("style", "margin: auto; display: flex")
+                document.querySelector("#all").append(summary)
+
+                // re-create all-yearly-records
+                var new_div = document.createElement("div")
+                new_div.setAttribute("id", "all-yearly-records")
+                document.querySelector("#all").append(new_div)
+
+                // change the heading of the page to the appropriate date
+                document.getElementById("yearly_summary_heading").innerHTML = "Yearly Summary For " + year
+
+                // create table with rows and columns
+                var table = document.createElement("table")
+                // fit all header rows here
+                var tr_heading = document.createElement("tr")
+
+                // month column header
+                var month_col = document.createElement("th")
+
+                // creating category headers
+                var th_utility = document.createElement("th")
+                var th_food = document.createElement("th")
+                var th_gas = document.createElement("th")
+                var th_rent = document.createElement("th")
+                var th_transportation = document.createElement("th")
+                var th_subscription = document.createElement("th")
+                var th_health = document.createElement("th")
+                var th_p_expense = document.createElement("th")
+                var th_other = document.createElement("th")
+                // header that shows sum of all expenses of all categories in every month
+                var th_total_expenses = document.createElement("th")
+
+                // stylize the width percentages
+                month_col.setAttribute("style", "width: 5%")
+                th_utility.setAttribute("style", "width: 10%")
+                th_food.setAttribute("style", "width: 10%")
+                th_gas.setAttribute("style", "width: 10%")
+                th_rent.setAttribute("style", "width: 10%")
+                th_transportation.setAttribute("style", "width: 10%")
+                th_subscription.setAttribute("style", "width: 10%")
+                th_health.setAttribute("style", "width: 10%")
+                th_p_expense.setAttribute("style", "width: 10%")
+                th_other.setAttribute("style", "width: 10%")
+                th_total_expenses.setAttribute("style", "width: 5%")
+
+                // add every component in the header group
+                tr_heading.append(month_col)
+                tr_heading.append(th_utility)
+                tr_heading.append(th_food)
+                tr_heading.append(th_gas)
+                tr_heading.append(th_rent)
+                tr_heading.append(th_transportation)
+                tr_heading.append(th_subscription)
+                tr_heading.append(th_health)
+                tr_heading.append(th_p_expense)
+                tr_heading.append(th_other)
+                tr_heading.append(th_total_expenses)
+
+                // input values of the row headers
+                month_col.innerHTML = "Month"
+                th_total_expenses.innerHTML = "Total Expenses"
+
+                // categories
+                th_utility.innerHTML = "Utility"
+                th_food.innerHTML = "Food"
+                th_gas.innerHTML = "Gas"
+                th_rent.innerHTML = "Mortgage/Rent"
+                th_transportation.innerHTML = "Transportation"
+                th_subscription.innerHTML = "Subscriptions"
+                th_health.innerHTML = "Healthcare"
+                th_p_expense.innerHTML = "Personal Expenses"
+                th_other.innerHTML = "Other"
+
+                // create GROUPS for rows under month_col of every month
+                // groups up td_[month] and td_[month_expense]
+                var tr_jan = document.createElement("tr")
+                var tr_feb = document.createElement("tr")
+                var tr_march = document.createElement("tr")
+                var tr_april = document.createElement("tr")
+                var tr_may = document.createElement("tr")
+                var tr_june = document.createElement("tr")
+                var tr_july = document.createElement("tr")
+                var tr_aug = document.createElement("tr")
+                var tr_sept = document.createElement("tr")
+                var tr_oct = document.createElement("tr")
+                var tr_nov = document.createElement("tr")
+                var tr_dec = document.createElement("tr")
+
+                // create a grand total row
+                var tr_grand = document.createElement("tr")
+
+                // assign the tr groups an id
+                tr_jan.setAttribute("id", "1")
+                tr_feb.setAttribute("id", "2")
+                tr_march.setAttribute("id", "3")
+                tr_april.setAttribute("id", "4")
+                tr_may.setAttribute("id", "5")
+                tr_june.setAttribute("id", "6")
+                tr_july.setAttribute("id", "7")
+                tr_aug.setAttribute("id", "8")
+                tr_sept.setAttribute("id", "9")
+                tr_oct.setAttribute("id", "10")
+                tr_nov.setAttribute("id", "11")
+                tr_dec.setAttribute("id", "12")
+
+                // create rows under month_col of every month
+                // to be added in the tr[month] group
+                var td_jan = document.createElement("td")
+                var td_feb = document.createElement("td")
+                var td_march = document.createElement("td")
+                var td_april = document.createElement("td")
+                var td_may = document.createElement("td")
+                var td_june = document.createElement("td")
+                var td_july = document.createElement("td")
+                var td_aug = document.createElement("td")
+                var td_sept = document.createElement("td")
+                var td_oct = document.createElement("td")
+                var td_nov = document.createElement("td")
+                var td_dec = document.createElement("td")
+
+                // insert month values in every td_[month]
+                td_jan.innerHTML = "January"
+                td_feb.innerHTML = "February"
+                td_march.innerHTML = "March"
+                td_april.innerHTML = "April"
+                td_may.innerHTML = "May"
+                td_june.innerHTML = "June"
+                td_july.innerHTML = "July"
+                td_aug.innerHTML = "August"
+                td_sept.innerHTML = "September"
+                td_oct.innerHTML = "October"
+                td_nov.innerHTML = "November"
+                td_dec.innerHTML = "December"
+
+                // bold the month texts
+                td_jan.setAttribute("style", "font-weight: bold")
+                td_feb.setAttribute("style", "font-weight: bold")
+                td_march.setAttribute("style", "font-weight: bold")
+                td_april.setAttribute("style", "font-weight: bold")
+                td_may.setAttribute("style", "font-weight: bold")
+                td_june.setAttribute("style", "font-weight: bold")
+                td_july.setAttribute("style", "font-weight: bold")
+                td_aug.setAttribute("style", "font-weight: bold")
+                td_sept.setAttribute("style", "font-weight: bold")
+                td_oct.setAttribute("style", "font-weight: bold")
+                td_nov.setAttribute("style", "font-weight: bold")
+                td_dec.setAttribute("style", "font-weight: bold")
+
+                // add td month headers to tr month groups respectively
+                tr_jan.append(td_jan)
+                tr_feb.append(td_feb)
+                tr_march.append(td_march)
+                tr_april.append(td_april)
+                tr_may.append(td_may)
+                tr_june.append(td_june)
+                tr_july.append(td_july)
+                tr_aug.append(td_aug)
+                tr_sept.append(td_sept)
+                tr_oct.append(td_oct)
+                tr_nov.append(td_nov)
+                tr_dec.append(td_dec)
+
+                // add everything to TABLE!
+                // add heading
+                table.append(tr_heading)
+                // add all month tr's
+                table.append(tr_jan)
+                table.append(tr_feb)
+                table.append(tr_march)
+                table.append(tr_april)
+                table.append(tr_may)
+                table.append(tr_june)
+                table.append(tr_july)
+                table.append(tr_aug)
+                table.append(tr_sept)
+                table.append(tr_oct)
+                table.append(tr_nov)
+                table.append(tr_dec)
+
+                // add table to SUMMARY
+                document.getElementById("summary").append(table)
+
+                // define variables for sum of every category
+                let sum_util = 0
+                let sum_food = 0
+                let sum_gas = 0
+                let sum_rent = 0
+                let sum_transport = 0
+                let sum_sub = 0
+                let sum_health = 0
+                let sum_per = 0
+                let sum_other = 0
+
+                // calculate all category expenses per month
+                for (let month = 1; month <= 12; month++) {
+                    let expense_total = 0
+                    let utility = 0
+                    let food = 0
+                    let gas = 0
+                    let rent = 0
+                    let transportation = 0
+                    let subscription = 0
+                    let health = 0
+                    let p_expense = 0
+                    let other = 0
+
+                    // sum up every category for every month
+                    for (let i = 0; i < records.records.length; i++) {
+                        const d = parseInt(records.records[i].date.split('-')[1])
+                        if (d === month) {
+                            expense_total += parseFloat(records.records[i].expense)
+                            if (records.records[i].category === "Utility") {
+                                utility += parseFloat(records.records[i].expense)
+                            }
+                            else if (records.records[i].category === "Food") {
+                                food += parseFloat(records.records[i].expense)
+                            }
+                            else if (records.records[i].category === "Gas") {
+                                gas += parseFloat(records.records[i].expense)
+                            }
+                            else if (records.records[i].category === "Mortgage/Rent") {
+                                rent += parseFloat(records.records[i].expense)
+                            }
+                            else if (records.records[i].category === "Transportation") {
+                                transportation += parseFloat(records.records[i].expense)
+                            }
+                            else if (records.records[i].category === "Subscriptions") {
+                                subscription += parseFloat(records.records[i].expense)
+                            }
+                            else if (records.records[i].category === "Healthcare") {
+                                health += parseFloat(records.records[i].expense)
+                            }
+                            else if (records.records[i].category === "Personal Expenses") {
+                                p_expense += parseFloat(records.records[i].expense)
+                            }
+                            else if (records.records[i].category === "Other") {
+                                other += parseFloat(records.records[i].expense)
+                            }
+                        }
+                    }
+
+                    // add the values into the tr category groups
+                    group = document.getElementById(month)
+
+                    // create elements for each category
+                    var td_utility_v = document.createElement("td")
+                    var td_food_v = document.createElement("td")
+                    var td_gas_v = document.createElement("td")
+                    var td_rent_v = document.createElement("td")
+                    var td_transportation_v = document.createElement("td")
+                    var td_subscription_v = document.createElement("td")
+                    var td_health_v = document.createElement("td")
+                    var td_p_expense_v = document.createElement("td")
+                    var td_other_v = document.createElement("td")
+                    var td_expense_total_v = document.createElement("td")
+
+                    // input category expense values
+                    td_utility_v.innerHTML = "$" + utility
+                    td_food_v.innerHTML = "$" + food
+                    td_gas_v.innerHTML = "$" + gas
+                    td_rent_v.innerHTML = "$" + rent
+                    td_transportation_v.innerHTML = "$" + transportation
+                    td_subscription_v.innerHTML = "$" + subscription
+                    td_health_v.innerHTML = "$" + health
+                    td_p_expense_v.innerHTML = "$" + p_expense
+                    td_other_v.innerHTML = "$" + other
+                    td_expense_total_v.innerHTML = "$" + expense_total.toLocaleString()
+                    
+                    // bold the total expenses
+                    td_expense_total_v.setAttribute("style", "font-weight: bold")
+
+                    // append every td into the group
+                    group.append(td_utility_v)
+                    group.append(td_food_v)
+                    group.append(td_gas_v)
+                    group.append(td_rent_v)
+                    group.append(td_transportation_v)
+                    group.append(td_subscription_v)
+                    group.append(td_health_v)
+                    group.append(td_p_expense_v)
+                    group.append(td_other_v)
+                    group.append(td_expense_total_v)
+
+                    sum_util += utility
+                    sum_food += food
+                    sum_gas += gas
+                    sum_rent += rent
+                    sum_transport += transportation
+                    sum_sub += subscription
+                    sum_health += health
+                    sum_per += p_expense
+                    sum_other += other
+                }
+                
+                // calculate max sum of all expenses for the year
+                let max_sum = sum_util + sum_food + sum_gas + sum_rent + sum_transport + sum_sub + sum_health + sum_per + sum_other
+
+                // create td elements for every category's sum
+                var grand_head = document.createElement("td")
+                var td_sum_util = document.createElement("td")
+                var td_sum_food = document.createElement("td")
+                var td_sum_gas = document.createElement("td")
+                var td_sum_rent = document.createElement("td")
+                var td_sum_transport = document.createElement("td")
+                var td_sum_sub = document.createElement("td")
+                var td_sum_health = document.createElement("td")
+                var td_sum_per = document.createElement("td")
+                var td_sum_other = document.createElement("td")
+                var td_max_sum = document.createElement("td")
+
+                // input values
+                grand_head.innerHTML = "Grand Total"
+                td_sum_util.innerHTML = "$" + sum_util.toLocaleString()
+                td_sum_food.innerHTML = "$" + sum_food.toLocaleString()
+                td_sum_gas.innerHTML = "$" + sum_gas.toLocaleString()
+                td_sum_rent.innerHTML = "$" + sum_rent.toLocaleString()
+                td_sum_transport.innerHTML = "$" + sum_transport.toLocaleString()
+                td_sum_sub.innerHTML = "$" + sum_sub.toLocaleString()
+                td_sum_health.innerHTML = "$" + sum_health.toLocaleString()
+                td_sum_per.innerHTML = "$" + sum_per.toLocaleString()
+                td_sum_other.innerHTML = "$" + sum_other.toLocaleString()
+                td_max_sum.innerHTML = "$" + max_sum.toLocaleString()
+
+                // add grand totals to tr_grand
+                tr_grand.append(grand_head)
+                tr_grand.append(td_sum_util)
+                tr_grand.append(td_sum_food)
+                tr_grand.append(td_sum_gas)
+                tr_grand.append(td_sum_rent)
+                tr_grand.append(td_sum_transport)
+                tr_grand.append(td_sum_sub)
+                tr_grand.append(td_sum_health)
+                tr_grand.append(td_sum_per)
+                tr_grand.append(td_sum_other)
+                tr_grand.append(td_max_sum)
+
+                tr_grand.setAttribute("style", "font-weight: bold")
+
+                // add tr_grand to table!
+                table.append(tr_grand)
+                table.setAttribute("style", "margin: auto")
+                change_mode()
+            })
+        }
+    </script>
+
+{% endblock %}

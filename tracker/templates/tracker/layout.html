@@ -1,0 +1,228 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>{% block title %}Welcome to XLog{% endblock %}</title>
+    <link
+      rel="icon"
+      type="image/x-icon"
+      href="{% static 'tracker/xlog_logo.ico' %}"
+    />
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+      integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
+    />
+  </head>
+  <style>
+    #whole-navbar {
+        background-image: url({% static 'tracker/light_mode.png' %});
+    }
+  </style>
+  <body id="the_background">
+    <nav
+      id="whole-navbar"
+      class="navbar navbar-expand-lg navbar-dark bg-dark"
+      style="overflow: hidden; width: 100%; padding: 20px; margin-bottom: 20px; font-family: 'Courier New', Courier, monospace"
+    >
+      <style>
+        /* first hide the icon */
+        .icon {
+          display: none;
+        }
+
+        @keyframes slideLeft {
+          0% {
+            transform: translateX(100%);
+          }
+          100% {
+            transform: translateX(0%);
+          }
+        }
+
+        @keyframes slideRight {
+          100% {
+            transform: translateX(100%);
+          }
+          0% {
+            transform: translateX(0%);
+          }
+        }
+
+        /* when screen is less than 991 pixels */
+        @media screen and (max-width: 991px) {
+          /* show icon */
+          .icon {
+            float: right;
+            display: block;
+            padding-bottom: 20px;
+          }
+          /* hide links */
+          #links a {
+            display: none;
+          }
+          #links.responsive {
+            position: relative;
+          }
+          /* make sure icon won't change position */
+          #links.responsive .icon {
+            position: absolute;
+            top: 0;
+            right: 0;
+          }
+          #links.responsive a {
+            padding-top: 30px;
+            animation: 1s ease-out 0s 1 slideLeft;
+            float: none;
+            display: block;
+            align-items: left;
+            text-align: left;
+          }
+        }
+      </style>
+      <script>
+        function show_options() {
+          var navbar = document.getElementById("links");
+          if (navbar.className === "navbar-nav mr-auto") {
+            navbar.className += " responsive"; // allow it to be responsive
+          } else {
+            navbar.className = "navbar-nav mr-auto";
+          }
+        }
+      </script>
+      {% if user.is_authenticated %}
+        <a class="navbar-brand"
+        href="{% url 'index' %}"><b>XLog</b></a>
+      {% else %}
+        <a class="navbar-brand"
+        href="{% url 'login' %}"><b>XLog</b></a>
+      {% endif %}
+      <div>
+        <ul id="links" class="navbar-nav mr-auto">
+          {% if user.is_authenticated %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'index' %}" style="padding-right: 20px">Home</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'monthly_summary' %}" style="padding-right: 20px"
+              >Monthly Summary</a
+            >
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'yearly_summary' %}" style="padding-right: 20px"
+              >Yearly Summary</a
+            >
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'record' %}" style="padding-right: 20px">Record</a>
+          </li>
+          {% endif %}
+          <li class="nav-item">
+            <a id="dark_bright" class="nav-link" onclick="toggle_mode()" style="padding-right: 20px"
+              >Dark Mode</a
+            >
+          </li>
+          {% if user.is_authenticated %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'logout' %}">Log Out</a>
+          </li>
+          {% else %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'login' %}">Log In</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'register' %}">Register</a>
+          </li>
+          {% endif %}
+          <li id="the_icon" class="icon" onclick="show_options()">
+            <!-- icon -->
+            <i class="fa fa-bars"></i>
+          </li>
+
+          {% block script %}
+                <script src="{% static 'tracker/mode.js' %}"></script>
+          {% endblock %}
+
+          <script>
+            // when page loads
+            document.addEventListener("DOMContentLoaded", function () {
+              var e = document.getElementById("dark_bright");
+              var navbar = document.getElementById("whole-navbar");
+              var background = document.getElementById("the_background");
+              var icon = document.getElementById("the_icon");
+              
+              // it's in light mode
+              if (localStorage.getItem("dark") === "false") {
+                e.innerHTML = "Dark Mode";
+
+                // change colors to light mode!
+                background.setAttribute("style", "background-color: white");
+                navbar.className =
+                  "navbar navbar-expand-lg navbar-light bg-light";
+                icon.setAttribute("style", "color: black");
+                navbar.setAttribute("style", "background-image: url({% static 'tracker/light_mode.png' %}); font-family: 'Courier New', Courier, monospace; background-size: cover")
+              }
+              // it's in dark mode
+              else {
+                e.innerHTML = "Light Mode";
+
+                // change colors to dark mode!
+                background.setAttribute("style", "background-color: black");
+                navbar.className =
+                  "navbar navbar-expand-lg navbar-dark bg-dark";
+                icon.setAttribute("style", "color: white");
+                navbar.setAttribute("style", "background-image: url({% static 'tracker/dark_mode.png' %}); font-family: 'Courier New', Courier, monospace; background-size: cover")
+              }
+
+              // change respective page mode!
+              change_mode(0)
+            });
+
+            function toggle_mode() {
+              var e = document.getElementById("dark_bright");
+              var navbar = document.getElementById("whole-navbar");
+              var background = document.getElementById("the_background");
+              var icon = document.getElementById("the_icon");
+              // change to dark mode
+              if (localStorage.getItem("dark") === "false") {
+                localStorage.setItem("dark", "true");
+                e.innerHTML = "Light Mode";
+                // change colors to dark mode!
+                background.setAttribute("style", "background-color: black");
+                navbar.className =
+                  "navbar navbar-expand-lg navbar-dark bg-dark";
+                icon.setAttribute("style", "color: white");
+                console.log("changing to dark mode")
+                navbar.setAttribute("style", "background-image: url({% static 'tracker/dark_mode.png' %}); font-family: 'Courier New', Courier, monospace; background-size: cover")
+              }
+              // change to light mode
+              else {
+                localStorage.setItem("dark", "false");
+                e.innerHTML = "Dark Mode";
+
+                // change colors to light mode!
+                background.setAttribute("style", "background-color: white");
+                navbar.className =
+                  "navbar navbar-expand-lg navbar-light bg-light";
+                icon.setAttribute("style", "color: black");
+                console.log("changing to light mode")
+                navbar.setAttribute("style", "background-image: url({% static 'tracker/light_mode.png' %}); font-family: 'Courier New', Courier, monospace; background-size: cover")
+              }
+
+              // change modes on the respective page!
+              change_mode(0)
+            }
+          </script>
+        </ul>
+      </div>
+    </nav>
+
+    <div class="body">{% block body %} {% endblock %}</div>
+  </body>
+</html>

@@ -1,0 +1,234 @@
+{% extends "tracker/layout.html" %} {% load static %} {% block body %}
+<!-- create an expense record for only logged in users -->
+<br>
+<div id="record-form">{% csrf_token %}</div>
+<div id="buttons"></div>
+
+<script>
+  function create_record_form(form_count) {
+    // create a record fill-out form
+    // expense
+    var e_div = document.createElement("div");
+    var exp_label = document.createElement("p");
+    exp_label.innerHTML = "Expense";
+    exp_label.setAttribute("style", "display: flex; justify-content: center; align-items: center")
+    var expense = document.createElement("input");
+    expense.placeholder = "$10.00";
+    expense.setAttribute("id", "expense");
+    expense.setAttribute("type", "number");
+    expense.setAttribute(
+      "style",
+      "border-radius: 10px; width: 400px; background-color: transparent; display: flex; justify-content: center; margin: 0 auto"
+    );
+    e_div.append(document.createElement("br"));
+    e_div.append(exp_label);
+    e_div.append(expense);
+    e_div.setAttribute(
+      "style",
+      "font-family: 'Courier New', Courier, monospace"
+    );
+
+    // category
+    var c_div = document.createElement("div");
+    var cat_label = document.createElement("p");
+    cat_label.innerHTML = "Category";
+    cat_label.setAttribute("style", "display: flex; justify-content: center; align-items: center")
+    var select = document.createElement("select");
+    select.setAttribute("id", "category");
+    select.setAttribute("style", "padding-left: 10px; height: 50px; border-radius: 10px; width: 400px; background-color: transparent; display: flex; justify-content: center; margin: 0 auto");
+    c_div.append(document.createElement("br"));
+    c_div.append(cat_label);
+    c_div.append(select);
+    c_div.setAttribute(
+      "style",
+      "font-family: 'Courier New', Courier, monospace"
+    );
+
+    // create options for the category
+    var util_op = document.createElement("option");
+    util_op.innerHTML = "Utility";
+    var food_op = document.createElement("option");
+    food_op.innerHTML = "Food";
+    var gas_op = document.createElement("option");
+    gas_op.innerHTML = "Gas";
+    var rent_op = document.createElement("option");
+    rent_op.innerHTML = "Mortgage/Rent";
+    var trans_op = document.createElement("option");
+    trans_op.innerHTML = "Transportation";
+    var sub_op = document.createElement("option");
+    sub_op.innerHTML = "Subscriptions";
+    var health_op = document.createElement("option");
+    health_op.innerHTML = "Healthcare";
+    var p_e_op = document.createElement("option");
+    p_e_op.innerHTML = "Personal Expenses";
+    var other_op = document.createElement("option");
+    other_op.innerHTML = "Other";
+
+    // add the options to the select
+    select.append(util_op);
+    select.append(food_op);
+    select.append(gas_op);
+    select.append(rent_op);
+    select.append(trans_op);
+    select.append(sub_op);
+    select.append(health_op);
+    select.append(p_e_op);
+    select.append(other_op);
+
+    // location
+    var l_div = document.createElement("div");
+    var loc_label = document.createElement("p");
+    loc_label.innerHTML = "Location";
+    loc_label.setAttribute("style", "display: flex; justify-content: center; align-items: center")
+    var loc = document.createElement("input");
+    loc.setAttribute("id", "location");
+    loc.setAttribute("style", "border-radius: 10px; width: 400px; background-color: transparent; display: flex; justify-content: center; margin: 0 auto");
+    l_div.append(document.createElement("br"));
+    l_div.append(loc_label);
+    l_div.append(loc);
+    l_div.setAttribute(
+      "style",
+      "font-family: 'Courier New', Courier, monospace"
+    );
+
+    // memo
+    var m_div = document.createElement("div");
+    var memo_label = document.createElement("p");
+    memo_label.innerHTML = "Memo";
+    memo_label.setAttribute("style", "display: flex; justify-content: center; align-items: center")
+    var memo = document.createElement("textarea");
+    memo.setAttribute("id", "memo");
+    memo.setAttribute(
+      "style",
+      "border-radius: 10px; width: 400px; height: 100px; background-color: transparent; display: flex; justify-content: center; margin: 0 auto"
+    );
+    m_div.append(document.createElement("br"));
+    m_div.append(memo_label);
+    m_div.append(memo);
+    m_div.setAttribute(
+      "style",
+      "font-family: 'Courier New', Courier, monospace"
+    );
+
+    // create form
+    form = document.createElement("form");
+
+    // if it's the first form
+    if (form_count === 0) {
+        // date
+        var d_div = document.createElement("div");
+        var date_label = document.createElement("p");
+        date_label.innerHTML = "Date";
+        date_label.setAttribute("style", "display: flex; justify-content: center; align-items: center")
+        var date = document.createElement("input");
+        date.setAttribute("id", "the_date");
+        date.setAttribute("type", "date");
+        date.setAttribute("style", "border-radius: 10px; display: flex; justify-content: center; margin: 0 auto; width: 400px; background-color: transparent;");
+        d_div.append(date_label);
+        d_div.append(date);
+        d_div.setAttribute("style", "font-family: 'Courier New', Courier, monospace;");
+        // add to the form
+        form.append(d_div);
+        console.log(date.id)
+    }
+
+    // add all the rest of the form components into form
+    form.append(e_div);
+    form.append(c_div);
+    form.append(l_div);
+    form.append(m_div);
+    form.setAttribute("id", "id" + form_count);
+    form.setAttribute("style", "padding: 10px")
+
+    // add to the form div
+    document.getElementById("record-form").append(form);
+
+    // make sure everything matches with the mode
+    change_mode(1);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    // create first form
+    create_record_form(0);
+
+    // add a new section button
+    var section_button = document.createElement("button");
+    section_button.innerHTML = "Add New Section";
+    section_button.setAttribute(
+      "style",
+      "margin-right: 10px; margin-left: 10px; background-color: transparent; font-family: 'Courier New', Courier, monospace; display: flex; justify-content: center; align-items: center"
+    );
+    section_button.setAttribute("class", "btn btn-sm btn-outline-primary");
+    document.getElementById("buttons").append(section_button);
+
+    // submit button
+    var button = document.createElement("button");
+    button.setAttribute("type", "submit");
+    button.innerHTML = "Create";
+    button.setAttribute("style", "background-color: transparent");
+    button.setAttribute("class", "btn btn-sm btn-outline-primary");
+    document.getElementById("buttons").append(button);
+    document
+      .getElementById("buttons")
+      .setAttribute(
+        "style",
+        "padding-top: 20px; font-family: 'Courier New', Courier, monospace; display: flex; justify-content: center; align-items: center"
+      );
+    document.getElementById("buttons").append(document.createElement("br"));
+    document.getElementById("buttons").append(document.createElement("br"));
+
+    var form_count = 1;
+    // add a new form section if add new section is clicked
+    section_button.onclick = function () {
+      create_record_form(form_count);
+      form_count += 1;
+    };
+
+    button.onclick = function () {
+      // create arrays for each type of data
+      var exp_arr = []
+      var cat_arr = []
+      var loc_arr = []
+      var memo_arr = []
+
+      // submit all forms by getting their id's
+      for (let i = 0; form_count > i; i++) {
+        // retrieve specific form
+        var form = document.getElementById("id" + i)
+        // push to array
+        exp_arr.push(form.expense.value)
+        cat_arr.push(form.category.value)
+        loc_arr.push(form.location.value)
+        memo_arr.push(form.memo.value)
+      }
+
+      fetch("", {
+        method: "POST",
+        body: JSON.stringify({
+          date_all: document.getElementById("the_date").value,
+          exp_arr: exp_arr,
+          cat_arr: cat_arr,
+          loc_arr: loc_arr,
+          memo_arr: memo_arr,
+        }),
+        headers: {
+          "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
+            .value,
+        },
+        mode: "same-origin",
+      })
+        .then((response) => response.json())
+        .then((message) => {
+          console.log(message);
+        });
+
+      // delete everything in the record-form div
+      document.querySelectorAll("#record-form").forEach((e) => {
+        e.remove();
+      });
+
+      location.reload();
+    };
+  });
+</script>
+{% endblock %}

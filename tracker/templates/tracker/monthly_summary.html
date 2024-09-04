@@ -1,0 +1,712 @@
+{% extends "tracker/layout.html" %} {% load static %} {% block body %}
+<!-- this page is only viewable for people who have logged in -->
+<!-- this page will show the MONTHLY SUMMARY of budgeting -->
+<br>
+<h1 id="insert-heading" style="display: flex; justify-content: center; text-align: center; font-family: 'Courier New', Courier, monospace">Monthly Summary</h1>
+
+<style>
+  #record_post_style {
+    border-bottom: 2px solid;
+    padding: 10px;
+    padding-top: 10px;
+    margin: 10px;
+    border-radius: 10px;
+    border-style: outset;
+  }
+</style>
+
+<!-- div for the input date form -->
+<div id="put_form"></div>
+
+<br>
+<div id="all">
+  <style>
+    table,
+    th,
+    td {
+      border: 1px solid black;
+    }
+  </style>
+  {% csrf_token %}
+  <!-- grand summary total -->
+  <div id="summary"></div>
+  <!-- individual daily records -->
+  <div id="all-monthly-records"></div>
+</div>
+
+<!-- code -->
+<script>
+  // create a form
+  var date_input_form = document.createElement("form")
+  date_input_form.setAttribute("id", "summary_form")
+  var select_year = document.createElement("select")
+  select_year.setAttribute("style", "background-color: transparent; font-family: 'Courier New', Courier, monospace")
+  select_year.setAttribute("id", "year")
+  
+  var select_month = document.createElement("select")
+  select_month.setAttribute("style", "margin-right: 1%; background-color: transparent; font-family: 'Courier New', Courier, monospace")
+  select_month.setAttribute("id", "month")
+
+  // month to change to
+  list_of_months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+  for (let m = 1; m <= 12; m++) {
+    var option = document.createElement("option")
+    option.value = m
+    option.innerHTML = list_of_months[m - 1]
+    option.id = m
+    select_month.append(option)
+
+    if (m === 1) {
+        option.selected = true
+        console.log("selected" + m)
+    }
+  }
+
+  // year to change to
+  const current_year = new Date().getFullYear()
+  var change_to_this_year = current_year
+  if ({{low}} != -1 && {{top}} != -1) {
+      change_to_this_year = {{top}}
+
+      for (let year = {{low}}; year <= {{top}}; year ++) {
+          var option = document.createElement("option")
+          option.value = year
+          option.innerHTML = year
+          select_year.append(option)
+  
+          if (year === {{top}}) {
+              option.selected = true
+              console.log("selected" + year)
+          }
+      }
+  }
+  else {
+      var option = document.createElement("option")
+      option.value = current_year
+      option.innerHTML = current_year
+      select_year.append(option)
+      option.selected = true
+  }
+
+  date_input_form.append(select_month)
+  date_input_form.append(select_year)
+  date_input_form.setAttribute("style", "display: flex; justify-content: center; align-items: center")
+  document.getElementById("put_form").append(date_input_form)
+
+  load_records(1, change_to_this_year)
+
+  date_input_form.onchange = function(event) {
+    event.preventDefault()
+    // get month and year and load it
+    const month = document.getElementById("month").value;
+    const year = document.getElementById("year").value;
+
+    // load the monthly summary
+    if (month && year) {
+        load_records(month, year);
+    }
+  }
+
+  function load_records(month, year) {
+    // call summary view function to load records
+    fetch("", {
+      method: "PUT",
+      body: JSON.stringify({
+        load: true,
+        month: month,
+        year: year,
+      }),
+      headers: {
+        "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
+          .value,
+      },
+      mode: "same-origin",
+    })
+      .then((response) => response.json())
+      .then((records) => {
+        // delete everything inside all-monthly-records div
+        document.querySelectorAll("#all-monthly-records").forEach((e) => {
+          e.remove();
+        });
+
+        // delete everything inside summary div
+        document.querySelectorAll("#summary").forEach((e) => {
+          e.remove();
+        });
+
+        // re-create summary
+        var summary = document.createElement("div");
+        summary.setAttribute("id", "summary");
+        document.querySelector("#all").append(summary);
+
+        // re-create all-monthly-records
+        var new_div = document.createElement("div");
+        new_div.setAttribute("id", "all-monthly-records");
+        document.querySelector("#all").append(new_div);
+
+        // calculate expense total of ALL categories
+        let expense_sum = 0;
+
+        // calculate all category expense totals
+        let utility = 0;
+        let food = 0;
+        let gas = 0;
+        let rent = 0;
+        let transportation = 0;
+        let subscription = 0;
+        let health = 0;
+        let p_expense = 0;
+        let other = 0;
+
+        // sum up!
+        for (let i = 0; i < records.records.length; i++) {
+          expense_sum += parseFloat(records.records[i].expense);
+          if (records.records[i].category === "Utility") {
+            utility += parseFloat(records.records[i].expense);
+          } else if (records.records[i].category === "Food") {
+            food += parseFloat(records.records[i].expense);
+          } else if (records.records[i].category === "Gas") {
+            gas += parseFloat(records.records[i].expense);
+          } else if (records.records[i].category === "Mortgage/Rent") {
+            rent += parseFloat(records.records[i].expense);
+          } else if (records.records[i].category === "Transportation") {
+            transportation += parseFloat(records.records[i].expense);
+          } else if (records.records[i].category === "Subscriptions") {
+            subscription += parseFloat(records.records[i].expense);
+          } else if (records.records[i].category === "Healthcare") {
+            health += parseFloat(records.records[i].expense);
+          } else if (records.records[i].category === "Personal Expenses") {
+            p_expense += parseFloat(records.records[i].expense);
+          } else if (records.records[i].category === "Other") {
+            other += parseFloat(records.records[i].expense);
+          }
+        }
+
+        // create table with rows and columns
+        var table = document.createElement("table");
+        var th_category = document.createElement("th");
+        var th_total_expenses = document.createElement("th");
+        var tr_heading = document.createElement("tr");
+
+        // group per category
+        var tr_utility = document.createElement("tr");
+        var tr_food = document.createElement("tr");
+        var tr_gas = document.createElement("tr");
+        var tr_rent = document.createElement("tr");
+        var tr_transportation = document.createElement("tr");
+        var tr_subscription = document.createElement("tr");
+        var tr_health = document.createElement("tr");
+        var tr_p_expense = document.createElement("tr");
+        var tr_other = document.createElement("tr");
+
+        // category name
+        var td_utility = document.createElement("td");
+        var td_food = document.createElement("td");
+        var td_gas = document.createElement("td");
+        var td_rent = document.createElement("td");
+        var td_transportation = document.createElement("td");
+        var td_subscription = document.createElement("td");
+        var td_health = document.createElement("td");
+        var td_p_expense = document.createElement("td");
+        var td_other = document.createElement("td");
+
+        // category expense values
+        var td_utility_v = document.createElement("td");
+        var td_food_v = document.createElement("td");
+        var td_gas_v = document.createElement("td");
+        var td_rent_v = document.createElement("td");
+        var td_transportation_v = document.createElement("td");
+        var td_subscription_v = document.createElement("td");
+        var td_health_v = document.createElement("td");
+        var td_p_expense_v = document.createElement("td");
+        var td_other_v = document.createElement("td");
+
+        // change the heading of the page to the appropriate date
+        document.getElementById("insert-heading").innerHTML = "Monthly Summary For " + document.getElementById(month).innerHTML + ", " + year
+        console.log("the year is " + year)
+        console.log(month)
+        console.log(document.getElementById(month))
+
+        // input total summary data
+        // heading
+        th_category.innerHTML = "Category";
+        th_total_expenses.innerHTML = "Total Expenses";
+        th_category.setAttribute("style", "width: 70%");
+        th_total_expenses.setAttribute("style", "width: 30%");
+        tr_heading.append(th_category);
+        tr_heading.append(th_total_expenses);
+
+        // categories
+        td_utility.innerHTML = "Utility";
+        td_food.innerHTML = "Food";
+        td_gas.innerHTML = "Gas";
+        td_rent.innerHTML = "Mortgage/Rent";
+        td_transportation.innerHTML = "Transportation";
+        td_subscription.innerHTML = "Subscriptions";
+        td_health.innerHTML = "Healthcare";
+        td_p_expense.innerHTML = "Personal Expenses";
+        td_other.innerHTML = "Other";
+
+        td_utility.setAttribute("style", "font-weight: bold")
+        td_food.setAttribute("style", "font-weight: bold")
+        td_gas.setAttribute("style", "font-weight: bold")
+        td_rent.setAttribute("style", "font-weight: bold")
+        td_transportation.setAttribute("style", "font-weight: bold")
+        td_subscription.setAttribute("style", "font-weight: bold")
+        td_health.setAttribute("style", "font-weight: bold")
+        td_p_expense.setAttribute("style", "font-weight: bold")
+        td_other.setAttribute("style", "font-weight: bold")
+
+        // category expense values
+        td_utility_v.innerHTML = "$" + utility.toLocaleString();
+        td_food_v.innerHTML = "$" + food.toLocaleString();
+        td_gas_v.innerHTML = "$" + gas.toLocaleString();
+        td_rent_v.innerHTML = "$" + rent.toLocaleString();
+        td_transportation_v.innerHTML = "$" + transportation.toLocaleString();
+        td_subscription_v.innerHTML = "$" + subscription.toLocaleString();
+        td_health_v.innerHTML = "$" + health.toLocaleString();
+        td_p_expense_v.innerHTML = "$" + p_expense.toLocaleString();
+        td_other_v.innerHTML = "$" + other.toLocaleString();
+
+        // add to individual tr's
+        tr_utility.append(td_utility);
+        tr_food.append(td_food);
+        tr_gas.append(td_gas);
+        tr_rent.append(td_rent);
+        tr_transportation.append(td_transportation);
+        tr_subscription.append(td_subscription);
+        tr_health.append(td_health);
+        tr_p_expense.append(td_p_expense);
+        tr_other.append(td_other);
+
+        tr_utility.append(td_utility_v);
+        tr_food.append(td_food_v);
+        tr_gas.append(td_gas_v);
+        tr_rent.append(td_rent_v);
+        tr_transportation.append(td_transportation_v);
+        tr_subscription.append(td_subscription_v);
+        tr_health.append(td_health_v);
+        tr_p_expense.append(td_p_expense_v);
+        tr_other.append(td_other_v);
+
+        // ADD TOTAL EXPENSE_SUM!
+        var tr_grand_total = document.createElement("tr");
+        var th_grand_total = document.createElement("th");
+        th_grand_total.setAttribute("style", "width: 30%");
+        th_grand_total.innerHTML = "Grand Total";
+        var td_grand_total = document.createElement("td");
+        td_grand_total.setAttribute("style", "font-weight: bold");
+        td_grand_total.innerHTML = "$" + expense_sum.toLocaleString();
+        tr_grand_total.append(th_grand_total);
+        tr_grand_total.append(td_grand_total);
+
+        // add everything to TABLE!
+        table.append(tr_heading);
+        table.append(tr_utility);
+        table.append(tr_food);
+        table.append(tr_gas);
+        table.append(tr_rent);
+        table.append(tr_transportation);
+        table.append(tr_subscription);
+        table.append(tr_health);
+        table.append(tr_p_expense);
+        table.append(tr_other);
+        table.append(tr_grand_total);
+        table.setAttribute("style", "margin: auto")
+
+        // add table to SUMMARY
+        document.getElementById("summary").append(table)
+        document.getElementById("summary").append(document.createElement("br"))
+
+        // display the monthly summaries
+        records.records.forEach((record) => {
+          // create individual summary where each record can be clicked into
+
+          // div for the invidivual summary
+          var indiv_div = document.createElement("div");
+          // set the style of the box
+          indiv_div.setAttribute(
+            "style",
+            "border-bottom: 2px solid; padding: 10px; padding-top: 10px; margin: 10px; border-radius: 10px; border-style: outset"
+          );
+
+          // date
+          var date = document.createElement("p");
+          date.setAttribute("id", "date" + record.id);
+          date.setAttribute("style", "font-family: 'Courier New', Courier, monospace")
+          date.innerHTML = "Date: " + record.date;
+          date.value = record.date;
+
+          // category
+          var category = document.createElement("p");
+          category.setAttribute("id", "category" + record.id);
+          category.innerHTML = "Category: " + record.category;
+          category.value = record.category;
+          category.setAttribute("style", "font-family: 'Courier New', Courier, monospace")
+
+          // expense
+          var expense = document.createElement("p");
+          expense.setAttribute("id", "expense" + record.id);
+          expense.innerHTML = "Expense: $" + record.expense;
+          expense.value = record.expense;
+          expense.setAttribute("style", "font-family: 'Courier New', Courier, monospace")
+
+          // add all necessary components in indiv_div
+          indiv_div.append(date);
+          indiv_div.append(category);
+          indiv_div.append(expense);
+
+          // location; optional component
+          var location = document.createElement("p");
+          location.setAttribute("id", "location" + record.id);
+          location.setAttribute("style", "font-family: 'Courier New', Courier, monospace")
+          if (record.location != "") {
+            location.innerHTML = "Location: " + record.location;
+            location.value = record.location;
+          }
+          else {
+            location.value = "";
+          }
+          indiv_div.append(location);
+
+          // memo; optional component
+          var memo = document.createElement("p");
+          memo.setAttribute("id", "memo" + record.id);
+          memo.setAttribute("style", "font-family: 'Courier New', Courier, monospace")
+          if (record.memo != "") {
+            memo.innerHTML = "Memo: " + record.memo;
+            memo.value = record.memo;
+          }
+          else {
+            memo.value = "";
+          }
+          indiv_div.append(memo);
+
+          // create edit button
+          var edit_button = document.createElement("button");
+          // create personal edit id
+          edit_button.setAttribute("id", "edit" + record.id);
+          edit_button.setAttribute("class", "btn btn-sm btn-outline-primary");
+          edit_button.setAttribute("style", "margin-right: 10px; font-family: 'Courier New', Courier, monospace")
+          edit_button.innerHTML = "Edit";
+          indiv_div.append(edit_button);
+
+          // create delete button
+          var delete_button = document.createElement("button");
+          delete_button.setAttribute("class", "btn btn-sm btn-outline-primary");
+          delete_button.setAttribute("style", "font-family: 'Courier New', Courier, monospace")
+          // create delete id
+          delete_button.setAttribute("id", "del" + record.id);
+          delete_button.innerHTML = "Delete";
+          indiv_div.append(delete_button);
+
+          // create special id for indiv_div
+          indiv_div.setAttribute("id", "id" + record.id);
+
+          // add indiv_div in the all-monthly-records div
+          main_div = document.getElementById("all-monthly-records");
+          main_div.append(indiv_div);
+
+          edit_button.addEventListener("click", () => editing(record.id));
+          delete_button.addEventListener("click", () => deleting(record.id));
+        });
+        change_mode(1)
+      });
+  }
+
+  function deleting(id) {
+    console.log("id is " + id);
+    if (confirm("Click OK to confirm deletion of record.")) {
+      // delete the record
+      fetch("", {
+        method: "DELETE",
+        body: JSON.stringify({
+          id: id,
+        }),
+        headers: {
+          "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
+            .value,
+        },
+        mode: "same-origin",
+      })
+        .then((response) => response.json())
+        .then((result) => {
+            // now physically delete the information on the web page
+            console.log(result)
+            document.getElementById("id" + id).remove()
+
+            // regenerate the table
+            // get month and year and load it
+            const month = document.getElementById("month").value
+            const year = document.getElementById("year").value
+            load_records(month, year)
+        })
+    }
+  }
+
+  function editing(id) {
+    console.log("editing");
+
+    // hide delete button
+    delete_button = document.getElementById("del" + id);
+    delete_button.setAttribute("style", "display: none");
+    // hide edit button
+    edit_button = document.getElementById("edit" + id);
+    edit_button.setAttribute("style", "display: none");
+
+    // get values from the data
+    date_val = document.getElementById("date" + id).value;
+    cat_val = document.getElementById("category" + id).value;
+    ex_val = document.getElementById("expense" + id).value;
+    loc_val = document.getElementById("location" + id).value;
+    memo_val = document.getElementById("memo" + id).value;
+
+    // hide the current state of data
+    document.getElementById("date" + id).setAttribute("style", "display: none");
+    document
+      .getElementById("category" + id)
+      .setAttribute("style", "display: none");
+    document
+      .getElementById("expense" + id)
+      .setAttribute("style", "display: none");
+    document
+      .getElementById("location" + id)
+      .setAttribute("style", "display: none");
+    document.getElementById("memo" + id).setAttribute("style", "display: none");
+
+    // create labels
+    var date_label = document.createElement("p");
+    date_label.innerHTML = "Date: ";
+    var cat_label = document.createElement("p");
+    cat_label.innerHTML = "Category: ";
+    var ex_label = document.createElement("p");
+    ex_label.innerHTML = "Expense: ";
+    var loc_label = document.createElement("p");
+    loc_label.innerHTML = "Location: ";
+    var memo_label = document.createElement("p");
+    memo_label.innerHTML = "Memo: ";
+
+    // create an editing section for the individual record
+    date = document.createElement("input");
+    date.setAttribute("type", "date");
+    date.setAttribute("style", "width: 200px; background-color: transparent")
+
+    // make sure expense only accepts integers
+    var expense = document.createElement("input");
+    expense.setAttribute("type", "number");
+    expense.setAttribute("style", "width: 200px; background-color: transparent")
+
+    var location = document.createElement("input");
+    location.setAttribute("style", "background-color: transparent")
+    var memo = document.createElement("textarea");
+    memo.setAttribute("style", "width: 200px; height: 100px; background-color: transparent")
+
+    var category = document.createElement("select");
+    category.setAttribute("style", "width: 200px; background-color: transparent")
+    // create options under category
+    var utility_op = document.createElement("option");
+    utility_op.innerHTML = "Utility";
+    var food_op = document.createElement("option");
+    food_op.innerHTML = "Food";
+    var gas_op = document.createElement("option");
+    gas_op.innerHTML = "Gas";
+    var rent_op = document.createElement("option");
+    rent_op.innerHTML = "Mortgage/Rent";
+    var trans_op = document.createElement("option");
+    trans_op.innerHTML = "Transportation";
+    var sub_op = document.createElement("option");
+    sub_op.innerHTML = "Subscriptions";
+    var health_op = document.createElement("option");
+    health_op.innerHTML = "Healthcare";
+    var p_ex_op = document.createElement("option");
+    p_ex_op.innerHTML = "Personal Expenses";
+    var other_op = document.createElement("option");
+    other_op.innerHTML = "Other";
+
+    // add options in category
+    category.append(utility_op);
+    category.append(food_op);
+    category.append(gas_op);
+    category.append(rent_op);
+    category.append(trans_op);
+    category.append(sub_op);
+    category.append(health_op);
+    category.append(p_ex_op);
+    category.append(other_op);
+
+    // pre-insert values
+    date.value = new Date(date_val).toISOString().split("T")[0];
+    category.value = cat_val;
+    expense.value = ex_val;
+    location.value = loc_val;
+    memo.value = memo_val;
+
+    indiv_div = document.getElementById("id" + id);
+
+    // create individual divs for every part
+    var d = document.createElement('div')
+    var c = document.createElement('div')
+    var e = document.createElement('div')
+    var l = document.createElement('div')
+    var m = document.createElement('div')
+
+    // add
+    d.append(date_label)
+    d.append(date)
+    c.append(document.createElement("br"))
+    c.append(cat_label)
+    c.append(category)
+    e.append(document.createElement("br"))
+    e.append(ex_label)
+    e.append(expense)
+    l.append(document.createElement("br"))
+    l.append(loc_label)
+    l.append(location)
+    m.append(document.createElement("br"))
+    m.append(memo_label)
+    m.append(memo)
+
+    d.setAttribute("style", "font-family: 'Courier New', Courier, monospace")
+    c.setAttribute("style", "font-family: 'Courier New', Courier, monospace")
+    e.setAttribute("style", "font-family: 'Courier New', Courier, monospace")
+    l.setAttribute("style", "font-family: 'Courier New', Courier, monospace")
+    m.setAttribute("style", "font-family: 'Courier New', Courier, monospace")
+
+    // add components in the indiv_div
+    indiv_div.append(d)
+    indiv_div.append(c)
+    indiv_div.append(e)
+    indiv_div.append(l)
+    indiv_div.append(m)
+
+    // add a break
+    indiv_div.append(document.createElement("br"))
+
+    // create cancel button
+    var cancel_button = document.createElement("button");
+    cancel_button.setAttribute("class", "btn btn-sm btn-outline-primary");
+    cancel_button.innerHTML = "Cancel";
+    cancel_button.setAttribute("style", "margin-right: 10px; font-family: 'Courier New', Courier, monospace")
+    indiv_div.append(cancel_button);
+
+    // create save button
+    var save_button = document.createElement("button");
+    save_button.setAttribute("class", "btn btn-sm btn-outline-primary");
+    save_button.innerHTML = "Save";
+    save_button.setAttribute("style", "font-family: 'Courier New', Courier, monospace")
+    indiv_div.append(save_button);
+
+    // make sure everything matches with the mode
+    change_mode()
+
+    cancel_button.onclick = function() {
+        console.log("cancelled!")
+        // regenerate the table
+        // get month and year and load it
+        const month = document.getElementById("month").value
+        const year = document.getElementById("year").value
+        load_records(month, year)
+    }
+
+    save_button.onclick = function () {
+      console.log("save!");
+      console.log("new date: " + date.value);
+      console.log("new cat: " + category.value);
+      console.log(expense.value);
+      console.log(location.value);
+      console.log(memo.value);
+
+      // make sure expense value only has at most 2 decimals and is >= 0.01
+      const two_places = /^\d+(\.\d{2})$/;
+      const one_place = /^\d+(\.\d{1})$/;
+
+      if (
+        (expense.value % 1 === 0 ||
+          two_places.test(expense.value) ||
+          one_place.test(expense.value)) &&
+        parseFloat(expense.value) >= 0.01
+      ) {
+        // save data
+        console.log("matches!");
+        fetch("", {
+          method: "PUT",
+          body: JSON.stringify({
+            edit: true,
+            id: id,
+            info: [
+              date.value,
+              category.value,
+              expense.value,
+              location.value,
+              memo.value,
+            ],
+          }),
+          headers: {
+            "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
+              .value,
+          },
+          mode: "same-origin",
+        })
+          .then((response) => response.json())
+          .then((message) => {
+            console.log(message)
+
+            // hide the save button
+            save_button.setAttribute("style", "display: none")
+            // show edit and delete buttons
+            edit_button.setAttribute("style", "display: block")
+            delete_button.setAttribute("style", "display: block")
+
+            console.log("date: " + date.value)
+            console.log("expe: " + expense.value)
+            // set the new data to the components
+            d = document.getElementById("date" + id)
+            d.value = date.value
+            d.innerHTML = "Date: " + date.value
+            c = document.getElementById("category" + id)
+            c.value = category.value
+            c.innerHTML = "Category: " + category.value
+            e = document.getElementById("expense" + id)
+            e.value = expense.value
+            e.innerHTML = "Expense: " + expense.value
+            l = document.getElementById("location" + id)
+            l.value = location.value
+            l.innerHTML = "Location: " + location.value
+            m = document.getElementById("memo" + id)
+            m.value = memo.value
+            m.innerHTML = "Memo: " + memo.value
+
+            // now show the saved data
+            d.setAttribute("style", "display: block")
+            c.setAttribute("style", "display: block")
+            e.setAttribute("style", "display: block")
+            l.setAttribute("style", "display: block")
+            m.setAttribute("style", "display: block")
+
+            // delete the editing inputs
+            date_label.remove()
+            date.remove()
+            cat_label.remove()
+            category.remove()
+            ex_label.remove()
+            expense.remove()
+            loc_label.remove()
+            location.remove()
+            memo_label.remove()
+            memo.remove()
+
+            // regenerate the table
+            // get month and year and load it
+            load_records(document.getElementById("month").value, document.getElementById("year").value)
+          });
+      } else {
+        alert(
+          "Please enter two decimal places and make sure the expense value is positive."
+        );
+      }
+    }
+  }
+
+</script>
+
+{% endblock %}
